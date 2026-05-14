@@ -1,14 +1,20 @@
 ---
 name: proximity-search
 description: >
-  Recherche des lieux ou équipements (hôpitaux, pharmacies, restaurants) à proximité d'un lieu 
-  ou de l'utilisateur. Trigger when user asks "le plus proche", "autour de moi", "où est l'hôpital".
+  Recherche précise de POI (points d'intérêt) via OpenStreetMap. 
+  À utiliser pour "hopital", "McDo", "garage", "abri", "supermarché", etc.
 allowed-tools: 
   - Bash(python3 *)
 ---
 
-# Skill Proximité
+# Skill Proximité Universel
 
-Pour trouver un lieu, utilise le script avec le type de lieu et la localisation :
+Pour chaque demande, choisis le tag OSM le plus approprié :
+- Restauration : `amenity=restaurant` ou `amenity=fast_food` (pour McDo)
+- Santé : `amenity=hospital`, `amenity=pharmacy` ou `amenity=doctors`
+- Commerce : `shop=supermarket`, `shop=bakery`
+- Urgence : `amenity=police`, `amenity=fire_station`
+- Loisirs : `leisure=park`, `tourism=hotel`
+
 ```bash
-python3 ${CLAUDE_SKILL_DIR}/find_nearby.py --type "$TYPE" --location "$LOCATION"
+python3 ${CLAUDE_SKILL_DIR}/find_nearby.py "$TAG_KEY" "$TAG_VALUE" "$LOCATION"
