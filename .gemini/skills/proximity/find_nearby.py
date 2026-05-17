@@ -1,5 +1,6 @@
 import requests
 import sys
+import json
 
 def get_nearby_universal(tag_key, tag_value, location_name):
     # Géocodage (trouver les coordonnées de la ville/lieu)
@@ -9,7 +10,7 @@ def get_nearby_universal(tag_key, tag_value, location_name):
     try:
         geo_res = requests.get(geo_url, headers=headers, timeout=10)
         if not geo_res.json():
-            return f"Localisation introuvable : {location_name}"
+            return json.dumps({"status": "error", "message": f"Localisation introuvable : {location_name}"}, ensure_ascii=False)
         
         lat, lon = geo_res.json()[0]['lat'], geo_res.json()[0]['lon']
 
@@ -31,12 +32,21 @@ def get_nearby_universal(tag_key, tag_value, location_name):
             e_lat = element.get('lat') or element.get('center', {}).get('lat')
             e_lon = element.get('lon') or element.get('center', {}).get('lon')
             map_link = f"https://www.google.com/maps?q={e_lat},{e_lon}"
-            results.append(f"- **{name}** : [Voir sur la carte]({map_link})")
+            results.append({
+                "name": name,
+                "lat": e_lat,
+                "lon": e_lon,
+                "map_link": map_link
+            })
 
-        return f"Résultats pour {tag_key}={tag_value} à {location_name} :\n" + "\n".join(results)
+        return json.dumps({
+            "status": "success",
+            "metadata": {"tag_key": tag_key, "tag_value": tag_value, "location": location_name},
+            "results": results
+        }, ensure_ascii=False)
 
     except Exception as e:
-        return f"Erreur : {str(e)}"
+        return json.dumps({"status": "error", "message": f"Erreur : {str(e)}"}, ensure_ascii=False)
 
 if __name__ == "__main__":
     # Usage: python3 find_nearby.py [tag_key] [tag_value] [location]

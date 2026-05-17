@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import sys
 import re
+import json
 
 # Dictionnaire des sources TIPI
 SOURCES = {
@@ -34,12 +35,22 @@ def scrape_tipi(type_info, mot_cle):
                 alertes_retrouvees.append(alerte_propre)
         
         if not alertes_retrouvees:
-            return f"RAS sur '{type_info}' pour '{mot_cle}'."
+            return json.dumps({
+                "status": "success",
+                "type_info": type_info,
+                "mot_cle": mot_cle,
+                "alertes": []
+            }, ensure_ascii=False)
 
-        return f"--- Source : {type_info.upper()} ---\n" + "\n\n".join(alertes_retrouvees[:3])
+        return json.dumps({
+            "status": "success",
+            "type_info": type_info,
+            "mot_cle": mot_cle,
+            "alertes": alertes_retrouvees[:3]
+        }, ensure_ascii=False)
 
     except Exception as e:
-        return f"Erreur technique ({type_info}) : {str(e)}"
+        return json.dumps({"status": "error", "message": f"Erreur technique ({type_info}) : {str(e)}"}, ensure_ascii=False)
 
 if __name__ == "__main__":
     # Usage : python3 trafic.py [bouchons|evenements|chantiers|previsions] [mot_cle]
