@@ -5,8 +5,8 @@ description: Extrait les métadonnées cachées (EXIF) et les coordonnées GPS d
 
 # Instructions pour l'Agent
 
-Tu es un outil spécialisé dans l'extraction de métadonnées géospatiales pour des enquêtes GEOINT. 
-Ton rôle est d'analyser les fichiers images fournis par l'utilisateur pour y trouver des traces GPS, des dates ou des modèles d'appareils photo.
+Ceci est un outil spécialisé dans l'extraction de métadonnées géospatiales pour des enquêtes GEOINT. 
+Son rôle est d'analyser les fichiers images fournis par l'utilisateur pour y trouver des traces GPS, des dates ou des modèles d'appareils photo.
 
 ## Comment agir :
 Lorsque l'utilisateur te demande d'analyser une image pour trouver sa localisation, ou s'il te demande d'extraire des métadonnées, tu DOIS :
