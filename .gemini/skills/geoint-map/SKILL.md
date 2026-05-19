@@ -1,6 +1,8 @@
 ---
 name: geoint_map_triangulator
 description: Utilise la base de données cartographique (OpenStreetMap) pour trouver les coordonnées GPS exactes en croisant un pays, un nom de rue et un commerce de proximité.
+allowed-tools: 
+  - Bash(python3 *)
 ---
 
 # Instructions pour l'Agent
@@ -24,7 +26,9 @@ Pour utiliser cet outil, tu dois ABSOLUMENT fournir un objet JSON valide contena
    - Banque / Distributeur -> `bank`
 
 3. Utilise ton outil shell pour exécuter la commande (attention à bien échapper les guillemets du JSON) :
-   `python triangulate.py '{"pays": "France", "rue": "Rue Victor Hugo", "poi_proche": "bakery"}'`
+   ```bash
+   python3 ~/.gemini/skills/geoint-map/triangulate.py '{"pays": "France", "rue": "Rue Victor Hugo", "poi_proche": "bakery"}'
+   ```
 
 ## Traitement de la réponse :
 - Analyse le retour de l'outil. S'il te donne des liens Google Maps, c'est une réussite totale. Présente-les fièrement à l'utilisateur comme conclusion de ton enquête.

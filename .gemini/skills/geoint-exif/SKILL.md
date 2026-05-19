@@ -1,6 +1,8 @@
 ---
 name: geoint_exif_extractor
 description: Extrait les métadonnées cachées (EXIF) et les coordonnées GPS d'une photographie.
+allowed-tools: 
+  - Bash(python3 *)
 ---
 
 # Instructions pour l'Agent
@@ -12,7 +14,9 @@ Son rôle est d'analyser les fichiers images fournis par l'utilisateur pour y tr
 Lorsque l'utilisateur te demande d'analyser une image pour trouver sa localisation, ou s'il te demande d'extraire des métadonnées, tu DOIS :
 1. Identifier le chemin du fichier image fourni par l'utilisateur.
 2. Utiliser ton outil d'exécution de commande (shell) pour lancer le script Python suivant :
-   `python extract_exif.py "<chemin_vers_image>"`
+   ```bash
+   python3 ~/.gemini/skills/geoint-exif/extract_exif.py "<chemin_vers_image>"
+   ```
 3. Analyser le JSON renvoyé par le script.
 
 ## Traitement de la réponse :

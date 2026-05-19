@@ -2,7 +2,7 @@
 name: proximity-search
 description: >
   Recherche précise de POI (points d'intérêt) via OpenStreetMap. 
-  À utiliser pour "hopital", "McDo", "garage", "abri", "supermarché", etc.
+  À utiliser pour "trouver un hôpital près de moi", "où est le McDo le plus proche", "garage", "abri", "supermarché", etc.
 allowed-tools: 
   - Bash(python3 *)
 ---
@@ -17,4 +17,5 @@ Pour chaque demande, choisis le tag OSM le plus approprié :
 - Loisirs : `leisure=park`, `tourism=hotel`
 
 ```bash
-python3 ${CLAUDE_SKILL_DIR}/find_nearby.py "$TAG_KEY" "$TAG_VALUE" "$LOCATION"
+python3 ~/.gemini/skills/proximity/find_nearby.py "$TAG_KEY" "$TAG_VALUE" "$LOCATION"
+```
