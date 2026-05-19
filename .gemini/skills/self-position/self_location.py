@@ -2,13 +2,16 @@ import requests
 
 def get_location():
     try:
-        data = requests.get("https://ipapi.co/json/", timeout=5).json()
+        data = requests.get("http://ip-api.com/json", timeout=5).json()
+        if data.get("status") != "success":
+            print(f"Erreur API : {data.get('message')}")
+            return None
         return {
             "ville"    : data.get("city"),
-            "région"   : data.get("region"),
-            "pays"     : data.get("country_name"),
-            "latitude" : data.get("latitude"),
-            "longitude": data.get("longitude"),
+            "région"   : data.get("regionName"),
+            "pays"     : data.get("country"),
+            "latitude" : data.get("lat"),
+            "longitude": data.get("lon"),
         }
     except requests.RequestException as e:
         print(f"Erreur : {e}")
