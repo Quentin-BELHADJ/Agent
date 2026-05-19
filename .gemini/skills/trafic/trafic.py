@@ -12,7 +12,7 @@ SOURCES = {
     "previsions": "https://tipi.bison-fute.gouv.fr/bison-fute-ouvert/publicationsDIR/Evenementiel-DIR/cnir/RecapChantiersPrevi.html"
 }
 
-def scrape_tipi(type_info, mot_cle):
+def scrape_tipi(type_info, mot_cle_raw):
     url = SOURCES.get(type_info, SOURCES["bouchons"])
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -24,6 +24,8 @@ def scrape_tipi(type_info, mot_cle):
         texte_brut = soup.get_text(" ", strip=True)
         blocs = re.split(r'(\*{2,3})', texte_brut)
         
+        mot_cle = resoudre_ville(mot_cle_raw)
+
         alertes_retrouvees = []
         for i in range(1, len(blocs), 2):
             symbole = blocs[i]
@@ -57,3 +59,20 @@ if __name__ == "__main__":
     type_req = sys.argv[1] if len(sys.argv) > 1 else "bouchons"
     mot_cle = sys.argv[2] if len(sys.argv) > 2 else "France"
     print(scrape_tipi(type_req, mot_cle))
+
+
+def resoudre_ville(mot_cle):
+    """Tente de résoudre une ville en numéro + nom de département via l'API geo.gouv.fr"""
+    try:
+        r = requests.get(
+            "https://geo.api.gouv.fr/communes",
+            params={"nom": mot_cle, "fields": "departement", "boost": "population", "limit": 1},
+            timeout=5
+        )
+        data = r.json()
+        if data:
+            dept = data[0]["departement"]
+            return [mot_cle.lower(), dept["code"], dept["nom"].lower()]
+    except Exception:
+        pass
+    return [mot_cle.lower()]  # fallback : on garde le mot-clé brut
