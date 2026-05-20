@@ -171,36 +171,28 @@ def _parse_csv(raw_text: str) -> dict:
     }
 
 def _download_csv() -> str:
-    """
-    Télécharge le CSV via l'URL directe et stable du flux LCSQA.
-    """
-    # URL directe du fichier CSV (celle qui ne bouge pas)
-    # Si le fichier change, c'est l'URL sur le serveur Ineris qui est mise à jour, 
-    # mais l'adresse de la ressource reste identique.
-    file_url = "https://files.data.gouv.fr/lcsqa/concentrations-de-polluants-atmospheriques-reglementes/temps-reel/fr/2026/AQUI_FR_2026.csv"
+    today = date.today()
+    base = (
+        "https://object.infra.data.gouv.fr/ineris-prod/lcsqa/"
+        "concentrations-de-polluants-atmospheriques-reglementes/temps-reel/fr/"
+    )
+    # Essaye aujourd'hui, puis hier si 404 (données parfois publiées avec délai)
+    for delta in range(3):
+        d = today.replace(day=today.day - delta) if delta == 0 else (
+            date.fromordinal(today.toordinal() - delta)
+        )
+        url = f"{base}{d.year}/FR_E2_{d.isoformat()}.csv"
+        print(f"[fetcher] Tentative : {url}", file=sys.stderr)
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+        if resp.status_code == 200:
+            resp.encoding = resp.apparent_encoding or "utf-8"
+            return resp.text
+        print(f"[fetcher] {resp.status_code} pour {url}", file=sys.stderr)
     
-    headers = {"User-Agent": "Mozilla/5.0"}
-    
-    print(f"[fetcher] Téléchargement direct depuis : {file_url}", file=sys.stderr)
-    
-    csv_resp = requests.get(file_url, headers=headers, timeout=30)
-    csv_resp.raise_for_status()
-    csv_resp.encoding = csv_resp.apparent_encoding or "utf-8"
-    
-    return csv_resp.text
+    raise requests.RequestException("Aucun fichier CSV trouvé pour les 3 derniers jours.")
+
 
 def get_measures(force_refresh: bool = False) -> dict:
-    """
-    Retourne les mesures depuis le cache si < 60 min, sinon télécharge.
-    En cas d'erreur réseau, utilise le cache même périmé avec un warning.
-
-    Retourne un dict avec clés :
-      - fetched_at (timestamp)
-      - nb_stations (int)
-      - stations (dict station_id -> métadonnées + mesures)
-      - cache_age_minutes (float)
-      - from_cache (bool)
-    """
     age = _cache_age_minutes()
 
     if not force_refresh and age < CACHE_MAX_AGE_MINUTES:
@@ -210,7 +202,6 @@ def get_measures(force_refresh: bool = False) -> dict:
             data["from_cache"] = True
             return data
 
-    # Téléchargement
     try:
         raw = _download_csv()
         data = _parse_csv(raw)
@@ -223,7 +214,13 @@ def get_measures(force_refresh: bool = False) -> dict:
     except requests.RequestException as e:
         print(f"[fetcher] Erreur réseau : {e}", file=sys.stderr)
 
-        # Fallback cache périmé
+        # CORRECTION : si force_refresh, on ne masque pas l'échec
+        if force_refresh:
+            raise RuntimeError(
+                f"Téléchargement forcé échoué : {e}"
+            ) from e
+
+        # Fallback cache périmé (seulement en mode normal)
         stale = _load_cache()
         if stale:
             print(

@@ -137,20 +137,40 @@ def cmd_incident(args: argparse.Namespace) -> int:
 
 
 def cmd_refresh_cache(args: argparse.Namespace) -> int:
-    """Force le re-téléchargement du cache LCSQA."""
     try:
         data = refresh_cache()
+        nb = data.get("nb_stations", 0)
+
+        # CORRECTION : 0 stations = échec, pas succès
+        if nb == 0:
+            print(
+                json.dumps({
+                    "status": "error",
+                    "nb_stations": 0,
+                    "message": "Cache mis à jour mais aucune station chargée. "
+                               "Vérifiez l'URL source ou le format du CSV.",
+                }, ensure_ascii=False, indent=2)
+            )
+            return 1
+
         print(
             json.dumps({
                 "status": "ok",
-                "nb_stations": data.get("nb_stations", 0),
+                "nb_stations": nb,
                 "cache_age_minutes": 0,
-                "message": f"Cache mis à jour : {data.get('nb_stations', 0)} stations chargées.",
+                "message": f"Cache mis à jour : {nb} stations chargées.",
             }, ensure_ascii=False, indent=2)
         )
         return 0
+
     except Exception as e:
-        print(f"[main] Échec refresh-cache : {e}", file=sys.stderr)
+        print(
+            json.dumps({
+                "status": "error",
+                "message": str(e),
+            }, ensure_ascii=False, indent=2),
+            file=sys.stderr,
+        )
         return 1
 
 
