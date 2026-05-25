@@ -22,3 +22,6 @@ Le débit (`debit_m3s`) est en m³/s.
 Pour le niveau de vigilance officiel : https://www.vigicrues.gouv.fr
 Pour le détail des endpoints, voir `references/api.md`.
 Pour l'interprétation opérationnelle, voir `references/vigilance.md`.
+
+Si la commande échoue avec une erreur réseau, réessayer une fois avant d'abandonner.
+Ne pas compenser un échec du script par une recherche web — retourner l'erreur JSON telle quelle.
