@@ -18,7 +18,29 @@ from langgraph.prebuilt import create_react_agent
 
 # Configuration des chemins locaux pour importer et exécuter les compétences
 AGENTS_DIR = Path(__file__).resolve().parent
-SKILLS_DIR = AGENTS_DIR.parent / "skills"
+if (AGENTS_DIR / ".gemini" / "skills").exists():
+    SKILLS_DIR = AGENTS_DIR / ".gemini" / "skills"
+else:
+    SKILLS_DIR = AGENTS_DIR.parent / "skills"
+
+
+def load_env_file():
+    """Charge les variables d'environnement depuis un fichier .env local s'il existe."""
+    env_path = AGENTS_DIR / ".env"
+    if env_path.exists():
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, val = line.split("=", 1)
+                        os.environ[key.strip()] = val.strip().strip('"').strip("'")
+        except Exception:
+            pass
+
+
+# Chargement immédiat du .env s'il existe
+load_env_file()
 
 
 
@@ -123,10 +145,12 @@ def vigicrues(lat: float, lon: float, radius: Optional[float] = 30.0, max_result
 
 def load_system_prompt() -> str:
     """Charge le prompt de l'agent depuis le fichier markdown correspondant,
-
     avec un fallback si le fichier est manquant ou illisible.
     """
-    path = AGENTS_DIR / "crisis-navigator.md"
+    path = AGENTS_DIR / ".gemini" / "agents" / "crisis-navigator.md"
+    if not path.exists():
+        path = AGENTS_DIR / "crisis-navigator.md"
+
     if path.exists():
         try:
             content = path.read_text(encoding="utf-8")
@@ -157,7 +181,7 @@ def run_agent(query: str) -> str:
     app = create_react_agent(model, tools, prompt=system_prompt)
     
     inputs = {"messages": [("user", query)]}
-    result = app.invoke(inputs)
+    result = app.invoke(inputs, config={"recursion_limit": 50})
     
     # Récupération du message final
     last_message = result["messages"][-1]

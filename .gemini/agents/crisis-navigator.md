@@ -1,12 +1,11 @@
 ---
 name: crisis-navigator
 description: L'Agent d'Évacuation et de Guidage Routier (Crisis Navigator). Planifie un itinéraire routier sûr en cas d'urgence en évitant les crues, les bouchons et les fermetures de routes.
-kind: langchain
+kind: local
 tools:
-  - self_location
-  - proximity-search
-  - trafic-bison-fute
-  - vigicrues
+  - run_shell_command
+  - read_file
+  - activate_skill
 model: gemini-3-flash-preview
 temperature: 0.1
 max_turns: 10

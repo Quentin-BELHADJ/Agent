@@ -1,5 +1,27 @@
 import json
 import sys
+import os
+from pathlib import Path
+
+
+def load_env_file():
+    """Charge les variables d'environnement depuis un fichier .env local s'il existe."""
+    base_dir = Path(__file__).resolve().parent
+    env_path = base_dir / ".env"
+    if env_path.exists():
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, val = line.split("=", 1)
+                        os.environ[key.strip()] = val.strip().strip('"').strip("'")
+        except Exception:
+            pass
+
+
+# Chargement immédiat du .env s'il existe
+load_env_file()
 
 from langchain_core.tools import tool
 from langchain_core.documents import Document
@@ -12,13 +34,25 @@ try:
     from _lib.embeddings import get_embeddings
 except ImportError:
     print("Attention: _lib non trouvé. Utilisation de mocks pour LLM et Embeddings.", file=sys.stderr)
-    from langchain_core.language_models.fake import FakeListLLM
+    from langchain_core.language_models.chat_models import SimpleChatModel
     from langchain_core.embeddings.fake import FakeEmbeddings
+    
+    class FakeChatModel(SimpleChatModel):
+        def _call(self, messages, stop=None, run_manager=None, **kwargs):
+            return "Voici la réponse mockée de l'Analyste des Risques Cascades suite à l'incident."
+            
+        @property
+        def _llm_type(self) -> str:
+            return "fake-chat-model"
+            
+        def bind_tools(self, tools, **kwargs):
+            # Les agents de langgraph appellent bind_tools sur le modèle.
+            # Nous renvoyons simplement self pour le mock.
+            return self
+
     def get_llm(temperature=0):
-        # Fake responses that mimic the tool calling loop
-        return FakeListLLM(responses=[
-            "Voici la réponse mockée de l'Analyste des Risques Cascades suite à l'incident."
-        ])
+        return FakeChatModel()
+        
     def get_embeddings():
         return FakeEmbeddings(size=1536)
 
@@ -77,8 +111,26 @@ def rechercher_procedures(requete: str) -> str:
 # Liste des outils à fournir à l'agent
 tools = [geo, vigicrues, risques, rechercher_procedures]
 
-# Prompt système
-system_prompt = """Tu es un Analyste des Risques Cascades. Pour toute requête : 
+def load_system_prompt() -> str:
+    """Charge le prompt de l'agent depuis le fichier markdown correspondant,
+    avec un fallback si le fichier est manquant ou illisible.
+    """
+    from pathlib import Path
+    base_dir = Path(__file__).resolve().parent
+    path = base_dir / ".gemini" / "agents" / "risk-cascade.md"
+    if not path.exists():
+        path = base_dir / "risk-cascade.md"
+
+    if path.exists():
+        try:
+            content = path.read_text(encoding="utf-8")
+            parts = content.split("---")
+            if len(parts) >= 3:
+                # Le prompt commence après la fin du second séparateur frontmatter
+                return "---".join(parts[2:]).strip()
+        except Exception:
+            pass
+    return """Tu es un Analyste des Risques Cascades. Pour toute requête : 
 1) Obtiens le code INSEE via `geo`. 
 2) Évalue la situation via `vigicrues` et `risques`. 
 3) SI un danger est détecté, tu DOIS appeler `rechercher_procedures` pour obtenir les consignes préfectorales exactes. Ne génère pas de consignes toi-même. 
@@ -88,7 +140,7 @@ Formate ta réponse finale avec les métriques terrain, les risques induits, et 
 agent = create_react_agent(
     model=get_llm(temperature=0),
     tools=tools,
-    state_modifier=system_prompt
+    prompt=load_system_prompt()
 )
 
 
@@ -96,7 +148,7 @@ agent = create_react_agent(
 
 def run_agent(incident: str) -> str:
     """Lance l'agent avec l'incident donné et retourne la réponse finale."""
-    resultat = agent.invoke({"messages": [("user", incident)]})
+    resultat = agent.invoke({"messages": [("user", incident)]}, config={"recursion_limit": 50})
     return resultat["messages"][-1].content
 
 if __name__ == "__main__":

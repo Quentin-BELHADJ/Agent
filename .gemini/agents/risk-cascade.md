@@ -3,10 +3,9 @@ name: agent-quentin
 description: Analyste des Risques Cascades. À utiliser pour évaluer une situation d'incident donnée et anticiper les risques d'urgence en chaîne.
 kind: local
 tools:
-  - geo
-  - vigicrues
-  - risques
-  - rechercher_procedures
+  - run_shell_command
+  - read_file
+  - activate_skill
 model: gemini-3-flash-preview
 temperature: 0.0
 max_turns: 10

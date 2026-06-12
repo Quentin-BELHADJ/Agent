@@ -20,7 +20,7 @@ def triangulate(json_args):
             return json.dumps({"status": "error", "message": "Les champs 'pays' et 'rue' sont obligatoires pour la triangulation."})
         
         # Construction de la requête spatiale Overpass QL
-        query = f'[out:json][timeout:25];\n'
+        query = '[out:json][timeout:25];\n'
         query += f'area["name"="{pays}"]->.searchArea;\n'
         query += f'way["name"="{rue}"](area.searchArea)->.target_street;\n'
         
@@ -29,7 +29,7 @@ def triangulate(json_args):
             query += f'nwr(around.target_street:50)["amenity"="{poi}"];\n'
         else:
             # Sinon, on sort juste les coordonnées de la rue
-            query += f'.target_street;\n'
+            query += '.target_street;\n'
             
         query += 'out center;'
         

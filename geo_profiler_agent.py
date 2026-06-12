@@ -12,6 +12,25 @@ from langgraph.prebuilt import create_react_agent
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SKILLS_DIR = os.path.join(BASE_DIR, ".gemini", "skills")
 
+
+def load_env_file():
+    """Charge les variables d'environnement depuis un fichier .env local s'il existe."""
+    env_path = os.path.join(BASE_DIR, ".env")
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, val = line.split("=", 1)
+                        os.environ[key.strip()] = val.strip().strip('"').strip("'")
+        except Exception:
+            pass
+
+
+# Chargement immédiat du .env s'il existe
+load_env_file()
+
 # Prompts
 SYSTEM_PROMPT = """Tu es "Geo-Profiler", un agent d'investigation OSINT et GEOINT expert.
 Ton objectif est de déterminer la localisation géographique exacte (pays, ville, rue, coordonnées GPS) de toute photographie fournie par l'utilisateur. Tu ne dois JAMAIS deviner ou halluciner une localisation : tu dois la prouver en utilisant tes outils dans un ordre logique et strict.
@@ -120,7 +139,7 @@ def geoint_vision_analyzer(image_path: str) -> str:
     except Exception as e:
         return json.dumps({"status": "error", "message": f"Erreur lors de la lecture de l'image : {e}"})
 
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0)
+    llm = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"), temperature=0)
     
     msg = HumanMessage(
         content=[
@@ -138,25 +157,57 @@ def geoint_vision_analyzer(image_path: str) -> str:
     except Exception as e:
         return json.dumps({"status": "error", "message": f"Erreur lors de l'appel vision : {e}"})
 
+def load_system_prompt() -> str:
+    """Charge le prompt de l'agent depuis le fichier markdown correspondant,
+    avec un fallback si le fichier est manquant ou illisible.
+    """
+    from pathlib import Path
+    base_path = Path(BASE_DIR)
+    path = base_path / ".gemini" / "agents" / "geo-profiler.md"
+    if not path.exists():
+        path = base_path / "geo-profiler.md"
+
+    if path.exists():
+        try:
+            content = path.read_text(encoding="utf-8")
+            parts = content.split("---")
+            if len(parts) >= 3:
+                # Le prompt commence après la fin du second séparateur frontmatter
+                return "---".join(parts[2:]).strip()
+        except Exception:
+            pass
+    return SYSTEM_PROMPT
+
 # Build agent
 def create_geoprofiler_agent():
     tools = [geoint_exif_extractor, geoint_ocr_reader, geoint_web_search, geoint_map_triangulator, geoint_vision_analyzer]
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1)
-    agent_executor = create_react_agent(llm, tools, state_modifier=SYSTEM_PROMPT)
+    llm = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"), temperature=0.1)
+    agent_executor = create_react_agent(llm, tools, prompt=load_system_prompt())
     return agent_executor
+
+def run_agent(target_image: str) -> str:
+    """Initialise et exécute le workflow de l'agent Geo Profiler."""
+    agent = create_geoprofiler_agent()
+    # Si c'est juste un chemin de fichier, on le formate, sinon on passe la requête telle quelle
+    if target_image.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")) or "/" in target_image:
+        query = f"Localise cette image de façon méthodique : {target_image}"
+    else:
+        query = target_image
+    response = agent.invoke({"messages": [("user", query)]}, config={"recursion_limit": 50})
+    return response["messages"][-1].content
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         target_image = sys.argv[1]
         print(json.dumps({"status": "info", "message": f"Début de l'investigation sur : {target_image}"}))
         try:
-            agent = create_geoprofiler_agent()
-            response = agent.invoke({"messages": [("user", f"Localise cette image de façon méthodique : {target_image}")]})
+            result = run_agent(target_image)
             print(json.dumps({
                 "status": "success",
-                "result": response["messages"][-1].content
+                "result": result
             }, indent=2))
         except Exception as e:
              print(json.dumps({"status": "error", "message": str(e)}, indent=2))
     else:
         print(json.dumps({"status": "error", "message": "Usage: python geo_profiler_agent.py <chemin_vers_image>"}, indent=2))
+
