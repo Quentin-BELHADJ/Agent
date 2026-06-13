@@ -3,6 +3,9 @@ name: quick-map
 description: Génère un schéma Mermaid. Trigger: "schéma", "diagramme", "carte mermaid".
 allowed-tools: Bash (python3 *)
 ---
+
+# Instructions pour l'Agent
+
 RÈGLE ABSOLUE : Tu ne dois JAMAIS afficher le code Mermaid à l'utilisateur ni expliquer le schéma. 
 
 Dès que l'utilisateur demande un schéma, tu dois EXÉCUTER la commande Shell suivante en respectant STRICTEMENT cette syntaxe (utilise des chemins relatifs et ne rajoute aucun guillemet autour de la commande globale) :

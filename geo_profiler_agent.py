@@ -3,20 +3,24 @@ import sys
 import json
 import base64
 import subprocess
+from pathlib import Path
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
+from llm import get_llm
 from langchain_core.messages import HumanMessage
 from langgraph.prebuilt import create_react_agent
 
-# Get the base directory dynamically
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SKILLS_DIR = os.path.join(BASE_DIR, ".gemini", "skills")
+# Récupère le répertoire de base de manière dynamique
+BASE_DIR = Path(__file__).resolve().parent
+if (BASE_DIR / ".gemini" / "skills").exists():
+    SKILLS_DIR = BASE_DIR / ".gemini" / "skills"
+else:
+    SKILLS_DIR = BASE_DIR.parent / "skills"
 
 
 def load_env_file():
     """Charge les variables d'environnement depuis un fichier .env local s'il existe."""
-    env_path = os.path.join(BASE_DIR, ".env")
-    if os.path.exists(env_path):
+    env_path = BASE_DIR / ".env"
+    if env_path.exists():
         try:
             with open(env_path, "r", encoding="utf-8") as f:
                 for line in f:
@@ -100,34 +104,34 @@ Génère ta réponse sous la forme d'un objet JSON pur et valide (aucune explica
 }
 """
 
-# Tools
+# Outils
 @tool
 def geoint_exif_extractor(image_path: str) -> str:
     """Extrait les métadonnées cachées (EXIF) et les coordonnées GPS d'une photographie."""
-    script_path = os.path.join(SKILLS_DIR, "geoint-exif", "extract_exif.py")
-    result = subprocess.run([sys.executable, script_path, image_path], capture_output=True, text=True)
+    script_path = SKILLS_DIR / "geoint-exif" / "extract_exif.py"
+    result = subprocess.run([sys.executable, str(script_path), image_path], capture_output=True, text=True)
     return result.stdout
 
 @tool
 def geoint_ocr_reader(image_path: str) -> str:
     """Extrait de manière fiable tout le texte visible sur une image (panneaux, devantures, plaques) grâce à l'intelligence artificielle (EasyOCR)."""
-    script_path = os.path.join(SKILLS_DIR, "geoint-ocr", "extract_text.py")
-    result = subprocess.run([sys.executable, script_path, image_path], capture_output=True, text=True)
+    script_path = SKILLS_DIR / "geoint-ocr" / "extract_text.py"
+    result = subprocess.run([sys.executable, str(script_path), image_path], capture_output=True, text=True)
     return result.stdout
 
 @tool
 def geoint_web_search(query: str) -> str:
     """Effectue des recherches sur le web pour vérifier des indices géographiques, des normes routières ou la localisation de points d'intérêt."""
-    script_path = os.path.join(SKILLS_DIR, "geoint-search", "search_web.py")
-    result = subprocess.run([sys.executable, script_path, query], capture_output=True, text=True)
+    script_path = SKILLS_DIR / "geoint-search" / "search_web.py"
+    result = subprocess.run([sys.executable, str(script_path), query], capture_output=True, text=True)
     return result.stdout
 
 @tool
 def geoint_map_triangulator(pays: str, rue: str, poi_proche: str = "") -> str:
     """Utilise la base de données cartographique (OpenStreetMap) pour trouver les coordonnées GPS exactes en croisant un pays, un nom de rue et un commerce de proximité."""
     data = {"pays": pays, "rue": rue, "poi_proche": poi_proche}
-    script_path = os.path.join(SKILLS_DIR, "geoint-map", "triangulate.py")
-    result = subprocess.run([sys.executable, script_path, json.dumps(data)], capture_output=True, text=True)
+    script_path = SKILLS_DIR / "geoint-map" / "triangulate.py"
+    result = subprocess.run([sys.executable, str(script_path), json.dumps(data)], capture_output=True, text=True)
     return result.stdout
 
 @tool
@@ -139,7 +143,7 @@ def geoint_vision_analyzer(image_path: str) -> str:
     except Exception as e:
         return json.dumps({"status": "error", "message": f"Erreur lors de la lecture de l'image : {e}"})
 
-    llm = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"), temperature=0)
+    llm = get_llm(temperature=0)
     
     msg = HumanMessage(
         content=[
@@ -161,11 +165,9 @@ def load_system_prompt() -> str:
     """Charge le prompt de l'agent depuis le fichier markdown correspondant,
     avec un fallback si le fichier est manquant ou illisible.
     """
-    from pathlib import Path
-    base_path = Path(BASE_DIR)
-    path = base_path / ".gemini" / "agents" / "geo-profiler.md"
+    path = BASE_DIR / ".gemini" / "agents" / "geo-profiler.md"
     if not path.exists():
-        path = base_path / "geo-profiler.md"
+        path = BASE_DIR / "geo-profiler.md"
 
     if path.exists():
         try:
@@ -178,10 +180,10 @@ def load_system_prompt() -> str:
             pass
     return SYSTEM_PROMPT
 
-# Build agent
+# Construction de l'agent
 def create_geoprofiler_agent():
     tools = [geoint_exif_extractor, geoint_ocr_reader, geoint_web_search, geoint_map_triangulator, geoint_vision_analyzer]
-    llm = ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL"), temperature=0.1)
+    llm = get_llm(temperature=0.1)
     agent_executor = create_react_agent(llm, tools, prompt=load_system_prompt())
     return agent_executor
 
@@ -197,17 +199,14 @@ def run_agent(target_image: str) -> str:
     return response["messages"][-1].content
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        target_image = sys.argv[1]
-        print(json.dumps({"status": "info", "message": f"Début de l'investigation sur : {target_image}"}))
-        try:
-            result = run_agent(target_image)
-            print(json.dumps({
-                "status": "success",
-                "result": result
-            }, indent=2))
-        except Exception as e:
-             print(json.dumps({"status": "error", "message": str(e)}, indent=2))
-    else:
-        print(json.dumps({"status": "error", "message": "Usage: python geo_profiler_agent.py <chemin_vers_image>"}, indent=2))
+    target_image = sys.argv[1] if len(sys.argv) > 1 else "test_images/photo_without_exif.jpg"
+    print(json.dumps({"status": "info", "message": f"Début de l'investigation sur : {target_image}"}))
+    try:
+        result = run_agent(target_image)
+        print(json.dumps({
+            "status": "success",
+            "result": result
+        }, indent=2))
+    except Exception as e:
+         print(json.dumps({"status": "error", "message": str(e)}, indent=2))
 

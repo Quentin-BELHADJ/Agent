@@ -15,17 +15,17 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 # Importations LangChain / LangGraph
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
+from llm import get_llm
 from langgraph.prebuilt import create_react_agent
 
 # Configuration des chemins locaux
-ROOT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT_DIR))
+BASE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(BASE_DIR))
 
 
 def load_env_file():
     """Charge les variables d'environnement depuis un fichier .env local s'il existe."""
-    env_path = ROOT_DIR / ".env"
+    env_path = BASE_DIR / ".env"
     if env_path.exists():
         try:
             with open(env_path, "r", encoding="utf-8") as f:
@@ -49,7 +49,7 @@ def call_crisis_navigator(query: str) -> str:
     Prend en paramètre la requête de guidage/évacuation de l'utilisateur.
     """
     print(f"\n[Master Agent] ➔ Appel de Crisis Navigator avec : '{query}'", file=sys.stderr)
-    import crisis_navigator
+    import crisis_navigator_agent as crisis_navigator
     res = crisis_navigator.run_agent(query)
     print(f"[Master Agent] ✔ Retour de Crisis Navigator ({len(res)} caractères)", file=sys.stderr)
     return res
@@ -59,7 +59,7 @@ def call_crisis_navigator(query: str) -> str:
 def call_geo_profiler(target_image: str) -> str:
     """Analyse visuellement et techniquement une photographie d'incident pour identifier la localisation géographique
     précise (pays, ville, rue, coordonnées GPS).
-    Prend en paramètre le chemin d'accès local vers le fichier image (ex: 'worldguessr_test1.png').
+    Prend en paramètre le chemin d'accès local vers le fichier image (ex: 'test_images/worldguessr_test1.png').
     """
     print(f"\n[Master Agent] ➔ Appel de Geo Profiler avec : '{target_image}'", file=sys.stderr)
     import geo_profiler_agent
@@ -75,7 +75,7 @@ def call_risk_assessor(query: str) -> str:
     Prend en paramètre le nom de la commune ou une question sur la commune.
     """
     print(f"\n[Master Agent] ➔ Appel de Risk Assessor avec : '{query}'", file=sys.stderr)
-    import risk_assessor
+    import risk_assessor_agent as risk_assessor
     res = risk_assessor.run_agent(query)
     print(f"[Master Agent] ✔ Retour de Risk Assessor ({len(res)} caractères)", file=sys.stderr)
     return res
@@ -88,7 +88,7 @@ def call_risk_cascade(query: str) -> str:
     Prend en paramètre la description textuelle de la situation d'incident (ex: 'forte pluie et montée de rivière à Besançon').
     """
     print(f"\n[Master Agent] ➔ Appel de Risk Cascade avec : '{query}'", file=sys.stderr)
-    import risk_cascade
+    import risk_cascade_agent as risk_cascade
     res = risk_cascade.run_agent(query)
     print(f"[Master Agent] ✔ Retour de Risk Cascade ({len(res)} caractères)", file=sys.stderr)
     return res
@@ -98,9 +98,9 @@ def load_system_prompt() -> str:
     """Charge le prompt de l'agent maître depuis le fichier markdown correspondant,
     avec un fallback si le fichier est manquant ou illisible.
     """
-    path = ROOT_DIR / ".gemini" / "agents" / "master-agent.md"
+    path = BASE_DIR / ".gemini" / "agents" / "master-agent.md"
     if not path.exists():
-        path = ROOT_DIR / "master-agent.md"
+        path = BASE_DIR / "master-agent.md"
 
     if path.exists():
         try:
@@ -119,11 +119,7 @@ Réponds toujours en français de manière calme et opérationnelle.
 
 def run_agent(query: str) -> str:
     """Initialise et exécute le workflow de l'agent maître."""
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
-    model = ChatGoogleGenerativeAI(
-        model=model_name,
-        temperature=0.1
-    )
+    model = get_llm(temperature=0.1)
     
     tools = [call_crisis_navigator, call_geo_profiler, call_risk_assessor, call_risk_cascade]
     system_prompt = load_system_prompt()
@@ -140,18 +136,15 @@ def run_agent(query: str) -> str:
 
 
 def main() -> int:
-    import argparse
-    parser = argparse.ArgumentParser(description="Master Agent — Superviseur d'Urgence Multi-Agents")
-    parser.add_argument("query", type=str, nargs="?", help="Requête globale de l'utilisateur ou situation d'incident")
-    args = parser.parse_args()
-    
-    if not args.query:
-        print("Erreur : Veuillez spécifier une requête.", file=sys.stderr)
-        print("Usage : python3 master_agent.py \"<requête>\"", file=sys.stderr)
-        return 1
+    query = sys.argv[1] if len(sys.argv) > 1 else None
+    if not query:
+        query = "Une image d'inondation à localiser a été trouvée : test_images/photo_with_exif.jpg. Peux-tu analyser l'image, me donner les risques pour cette ville et trouver l'hôpital le plus proche ?"
+        print(f"Aucune requête fournie. Lancement du cas de test par défaut :", file=sys.stderr)
+        print(f"'{query}'\n", file=sys.stderr)
         
     try:
-        response = run_agent(args.query)
+        response = run_agent(query)
+        print("--- RÉPONSE FINALE ---")
         print(response)
         return 0
     except Exception as e:

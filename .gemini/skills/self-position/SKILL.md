@@ -5,7 +5,7 @@ allowed-tools:
   - Bash(python3 *)
 ---
 
-# Mode d'emploi de la compétence (Skill)
+# Instructions pour l'Agent
 
 Ce workflow permet d'obtenir la position physique actuelle de la machine locale. À utiliser lorsque l'utilisateur demande sa position ou pour contextualiser une recherche géographique.
 

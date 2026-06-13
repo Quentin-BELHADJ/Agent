@@ -1,9 +1,13 @@
 ---
 name: vigicrues
-description: Trigger when user asks about flood risk, river water levels, flood alerts, or vigilance crues near an incident or GPS point. Keywords: crue, inondation, vigilance, rivière, fleuve, hauteur d'eau, débit, station hydrométrique, flood, water level, overflow, submersion, HubEau. Use for emergency assessment of flood risk around a location.
+description: >
+  À utiliser lorsque l'utilisateur pose des questions sur le risque d'inondation, les niveaux d'eau des rivières, les alertes de crue ou la vigilance crues à proximité d'un incident ou d'un point GPS.
+  Mots-clés : crue, inondation, vigilance, rivière, fleuve, hauteur d'eau, débit, station hydrométrique.
+allowed-tools: 
+  - Bash(python3 *)
 ---
 
-# Skill 'vigicrues'
+# Instructions pour l'Agent
 
 Pour interroger les hauteurs d'eau autour d'un point GPS d'incident :
 

@@ -1,11 +1,12 @@
-requests
 beautifulsoup4
-pytest
-ruff
 duckduckgo-search==5.0.0
 easyocr==1.7.1
-requests==2.31.0
 exifread==3.0.0
-langchain-google-genai
 langchain-core
+langchain-google-genai
+langchain-openai
 langgraph
+pytest
+python-dotenv
+requests==2.31.0
+ruff
