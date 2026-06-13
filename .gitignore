@@ -1,0 +1,22 @@
+# Fichiers compilés et cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnements virtuels et variables
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDEs et éditeurs de texte
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Fichiers générés et caches de test
+schema.svg
+.pytest_cache/
+.ruff_cache/
