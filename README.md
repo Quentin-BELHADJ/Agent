@@ -8,6 +8,8 @@ Ce document présente l'ensemble des compétences (skills) et des agents spécia
 
 ## Compétences (Skills)
 
+L'ensemble des compétences (skills) ci-dessous ont été réalisées spécifiquement pour gemini-cli afin de fournir des outils spécialisés exécutables par les agents de crise.
+
 ### Compétences GEOINT (Géospatial et OSINT)
 - **geoint_exif_extractor (geoint-exif)** : Extrait les métadonnées cachées (EXIF) et les coordonnées GPS potentielles d'une photographie.
 - **geoint_vision_analyzer (geoint-vision)** : Effectue une analyse visuelle experte d'une image pour en extraire des données géographiques brutes (infrastructures, architecture, environnement, climat) sans déduction hâtive.
@@ -64,11 +66,11 @@ python master_agent.py "Votre requête d'assistance globale"
 python crisis_navigator_agent.py "Trouve l'hôpital le plus proche de ma position"
 
 # Lancer l'agent d'investigation d'image (GEOINT)
-python geo_profiler_agent.py test_images/photo_with_exif.jpg
+python geo_profiler_agent.py test_images/photo_without_exif.jpg
 
 # Lancer l'agent d'évaluation des risques d'une commune
 python risk_assessor_agent.py "Besançon"
 
 # Lancer l'agent d'analyse de risques cascades (RAG)
-python risk_cascade_agent.py
+python risk_cascade_agent.py "Il pleut énormément sur Besançon depuis 3 jours, la rivière monte."
 ```
